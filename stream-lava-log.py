@@ -58,11 +58,13 @@ def validate_input(username, token, server):
 def main(args):
     url = validate_input(args.username, args.token, args.server)
     connection = connect(url)
+    run = True
+    end_states = ['Complete', 'Incomplete', 'Canceled']
     current_job_file = None
     old_job_file = None
     latest = None
 
-    while True:
+    while run:
         try:
             current_job_file = str(connection.scheduler.job_output(args.job))
             if old_job_file is not None:
@@ -73,7 +75,11 @@ def main(args):
                 print s
             time.sleep(2)
             old_job_file = current_job_file
-        except xmlrpclib.Fault:
+            status = connection.scheduler.job_status(args.job)
+            if status['job_status'] in end_states:
+                print 'Job has finished'
+                run = False
+        except (xmlrpclib.ProtocolError, xmlrpclib.Fault):
             pass
 
     exit(0)
