@@ -79,7 +79,7 @@ def main(args):
             if status['job_status'] in end_states:
                 print 'Job has finished'
                 run = False
-        except (xmlrpclib.ProtocolError, xmlrpclib.Fault):
+        except (xmlrpclib.ProtocolError, xmlrpclib.Fault, IOError):
             pass
 
     exit(0)
