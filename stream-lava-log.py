@@ -114,17 +114,6 @@ class ArgumentParser(object):
         return self.job
 
 
-def stream_string(s):
-    separators = '\n'
-    start = 0
-    end = 0
-    for end in range(len(s)):
-        if s[end] in separators:
-            yield s[start:end]
-            start = end + 1
-    if start < end:
-        yield s[start:end+1]
-
 def connect(url):
     try:
         print "Connecting to Server..."
@@ -164,8 +153,7 @@ class LavaRunJob(object):
             new_output = full_output[len(self.printed_output):]
         else:
             new_output = full_output
-        for s in stream_string(new_output):
-            print s
+        print new_output,
         self.printed_output = full_output
 
     def run(self):
