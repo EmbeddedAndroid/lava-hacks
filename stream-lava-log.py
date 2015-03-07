@@ -22,38 +22,39 @@ import xmlrpclib
 import ConfigParser, os
 
 class Config(object):
-    def __init__(self, config_parser=None):
-        if config_parser:
-            self.username = config_parser.get_username()
-            self.token = config_parser.get_token()
-            self.server = config_parser.get_server()
+    def __init__(self, config_sources=None):
+        self.config_sources = config_sources or list()
+
+    def add_config_override(self, config_source):
+        self.config_sources.insert(0, config_source)
+
+    def has_enough_config(self):
+        return (self.get_config_variable('username') and
+                self.get_config_variable('token') and
+                self.get_config_variable('server'))
 
     def construct_url(self):
-        if not self.username or not self.token or not self.server:
-            raise Exception("DIEE!!!!")
+        if not self.has_enough_config():
+            raise Exception("Not enough configuration to construct the URL")
 
-        print self.server
+        url = urlparse.urlparse(self.get_config_variable('server'))
 
-        self.url = urlparse.urlparse(self.server)
-        print self.url
-        if not self.url.path.endswith(('/RPC2', '/RPC2/')):
+        if not url.path.endswith(('/RPC2', '/RPC2/')):
             print "LAVA Server URL must end with /RPC2 or /RPC2/"
             exit(1)
-        return self.url.scheme + '://' + self.username + ':' + self.token + '@' + self.url.netloc + self.url.path
 
-    def update(self, config):
-        if config.get_username(): self.username = config.get_username()
-        if config.get_token(): self.token = config.get_token()
-        if config.get_server(): self.server = config.get_server()
+        return (url.scheme + '://' +
+                self.get_config_variable('username') + ':' +
+                self.get_config_variable('token') +
+                '@' + url.netloc + url.path)
 
-    def get_username(self):
-        return self.username
-
-    def get_token(self):
-        return self.token
-
-    def get_server(self):
-        return self.server
+    def get_config_variable(self, variable_name):
+        for config_source in self.config_sources:
+            method_name = 'get_%s' % variable_name
+            if hasattr(config_source, method_name):
+                variable = getattr(config_source, method_name)()
+                if variable:
+                    return variable
 
 
 class FileConfigParser(object):
@@ -137,8 +138,8 @@ def connect(url):
 
 def get_config(args):
     config = Config()
-    config = Config(FileConfigParser(filename=args.get('config', None), section=args.get('section', None)))
-    config.update(Config(ArgumentParser(args)))
+    config.add_config_override(FileConfigParser(filename=args.get('config', None), section=args.get('section', None)))
+    config.add_config_override(ArgumentParser(args))
     return config
 
 def main(args):
