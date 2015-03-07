@@ -99,6 +99,7 @@ class ArgumentParser(object):
         self.username = args.get('username')
         self.token = args.get('token')
         self.server = args.get('server')
+        self.job = args.get('job')
 
     def get_username(self):
         return self.username
@@ -108,6 +109,9 @@ class ArgumentParser(object):
 
     def get_server(self):
         return self.server
+
+    def get_job(self):
+        return self.job
 
 
 def stream_string(s):
