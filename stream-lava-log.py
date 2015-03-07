@@ -136,6 +136,49 @@ def connect(url):
         print "connect-to-server : fail"
         exit(1)
 
+class LavaRunJob(object):
+    def __init__(self, configuration):
+        self.configuration = configuration
+        self.connection = connect(configuration.construct_url())
+        self.END_STATES = ['Complete', 'Incomplete', 'Canceled']
+        self.job_id = self.configuration.get_config_variable('job')
+        self.printed_output = None
+
+    def is_running(self):
+        job_status = self.get_status()['job_status']
+        return job_status not in self.END_STATES
+
+    def get_status(self):
+        return self.connection.scheduler.job_status(self.job_id)
+
+    def get_output(self):
+        return self.connection.scheduler.job_output(self.job_id)
+
+    def print_output(self):
+        full_output = str(self.get_output())
+        if self.printed_output:
+            new_output = full_output[len(self.printed_output):]
+        else:
+            new_output = full_output
+        for s in stream_string(new_output):
+            print s
+        self.printed_output = full_output
+
+    def run(self):
+        is_running = True
+
+        while is_running:
+            try:
+                self.print_output()
+                time.sleep(2)
+            except (xmlrpclib.ProtocolError, xmlrpclib.Fault, IOError):
+                pass
+
+            is_running = self.is_running()
+
+        print 'Job has finished'
+
+
 def get_config(args):
     config = Config()
     config.add_config_override(FileConfigParser(filename=args.get('config', None), section=args.get('section', None)))
@@ -143,34 +186,9 @@ def get_config(args):
     return config
 
 def main(args):
-    config = get_config(args)
+    lava_job = LavaRunJob(get_config(args))
 
-    url = config.construct_url()
-
-    connection = connect(url)
-    run = True
-    end_states = ['Complete', 'Incomplete', 'Canceled']
-    current_job_file = None
-    old_job_file = None
-    latest = None
-
-    while run:
-        try:
-            current_job_file = str(connection.scheduler.job_output(args.get('job')))
-            if old_job_file is not None:
-                latest = current_job_file[len(old_job_file):]
-            else:
-                latest = current_job_file
-            for s in stream_string(latest):
-                print s
-            time.sleep(2)
-            old_job_file = current_job_file
-            status = connection.scheduler.job_status(args.get('job'))
-            if status['job_status'] in end_states:
-                print 'Job has finished'
-                run = False
-        except (xmlrpclib.ProtocolError, xmlrpclib.Fault, IOError):
-            pass
+    lava_job.run()
 
     exit(0)
 
