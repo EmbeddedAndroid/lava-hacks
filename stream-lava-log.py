@@ -114,38 +114,48 @@ class ArgumentParser(object):
         return self.job
 
 
-def connect(url):
-    try:
-        print "Connecting to Server..."
-        connection = xmlrpclib.ServerProxy(url)
-
-        print "Connection Successful!"
-        print "connect-to-server : pass"
-        return connection
-    except (xmlrpclib.ProtocolError, xmlrpclib.Fault, IOError) as e:
-        print "CONNECTION ERROR!"
-        print "Unable to connect to %s" % url
-        print e
-        print "connect-to-server : fail"
-        exit(1)
-
-class LavaRunJob(object):
+class LavaConnection(object):
     def __init__(self, configuration):
         self.configuration = configuration
-        self.connection = connect(configuration.construct_url())
-        self.END_STATES = ['Complete', 'Incomplete', 'Canceled']
-        self.job_id = self.configuration.get_config_variable('job')
-        self.printed_output = None
+        self.connection = None
 
-    def is_running(self):
-        job_status = self.get_status()['job_status']
-        return job_status not in self.END_STATES
+    def connect(self):
+        url = self.configuration.construct_url()
+        try:
+            print "Connecting to Server..."
+            self.connection = xmlrpclib.ServerProxy(url)
+
+            print "Connection Successful!"
+            print "connect-to-server : pass"
+        except (xmlrpclib.ProtocolError, xmlrpclib.Fault, IOError) as e:
+            print "CONNECTION ERROR!"
+            print "Unable to connect to %s" % url
+            print e
+            print "connect-to-server : fail"
+            exit(1)
+
+    def get_job_status(self, job_id):
+        return self.connection.scheduler.job_status(job_id)
+
+    def get_job_output(self, job_id):
+        return self.connection.scheduler.job_output(job_id)
+
+
+class LavaRunJob(object):
+    def __init__(self, connection, job_id):
+        self.END_STATES = ['Complete', 'Incomplete', 'Canceled']
+        self.job_id = job_id
+        self.printed_output = None
+        self.connection = connection
 
     def get_status(self):
-        return self.connection.scheduler.job_status(self.job_id)
+        return self.connection.get_job_status(self.job_id)['job_status']
 
     def get_output(self):
-        return self.connection.scheduler.job_output(self.job_id)
+        return self.connection.get_job_output(self.job_id)
+
+    def is_running(self):
+        return self.get_status() not in self.END_STATES
 
     def print_output(self):
         full_output = str(self.get_output())
@@ -158,6 +168,8 @@ class LavaRunJob(object):
 
     def run(self):
         is_running = True
+
+        self.connection.connect()
 
         while is_running:
             try:
@@ -178,7 +190,9 @@ def get_config(args):
     return config
 
 def main(args):
-    lava_job = LavaRunJob(get_config(args))
+    config = get_config(args)
+    lava_connection = LavaConnection(config)
+    lava_job = LavaRunJob(lava_connection, config.get_config_variable('job'))
 
     lava_job.run()
 
