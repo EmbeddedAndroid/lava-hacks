@@ -114,29 +114,36 @@ class ArgumentParser(object):
         return self.job
 
 
+def exit_on_throw(func):
+    def inner(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except (xmlrpclib.ProtocolError, xmlrpclib.Fault, IOError) as e:
+            print "Function %s raised an exception, exiting" % func.__name__
+            print e
+            exit(1)
+    return inner
+
+
 class LavaConnection(object):
     def __init__(self, configuration):
         self.configuration = configuration
         self.connection = None
 
+    @exit_on_throw
     def connect(self):
         url = self.configuration.construct_url()
-        try:
-            print "Connecting to Server..."
-            self.connection = xmlrpclib.ServerProxy(url)
+        print "Connecting to Server..."
+        self.connection = xmlrpclib.ServerProxy(url)
 
-            print "Connection Successful!"
-            print "connect-to-server : pass"
-        except (xmlrpclib.ProtocolError, xmlrpclib.Fault, IOError) as e:
-            print "CONNECTION ERROR!"
-            print "Unable to connect to %s" % url
-            print e
-            print "connect-to-server : fail"
-            exit(1)
+        print "Connection Successful!"
+        print "connect-to-server : pass"
 
+    @exit_on_throw
     def get_job_status(self, job_id):
         return self.connection.scheduler.job_status(job_id)
 
+    @exit_on_throw
     def get_job_output(self, job_id):
         return self.connection.scheduler.job_output(job_id)
 
