@@ -114,12 +114,28 @@ class ArgumentParser(object):
         return self.job
 
 
-def exit_on_throw(func):
+def handle_connection(func):
     def inner(*args, **kwargs):
         try:
             return func(*args, **kwargs)
-        except (xmlrpclib.ProtocolError, xmlrpclib.Fault, IOError) as e:
-            print "Function %s raised an exception, exiting" % func.__name__
+        except xmlrpclib.ProtocolError as e:
+            if e.errcode == 502:
+                print "Protocol Error: 502 Bad Gateway, retrying..."
+            elif e.errcode == 401:
+                print "Server authentication error."
+                print e
+                exit(1)
+            else:
+                print "Unknown XMLRPC error."
+                print e
+                exit(1)
+        except xmlrpclib.Fault as e:
+            if e.faultCode == 404 and e.faultString == \
+                    "Job output not found.":
+                print "Waiting for job output..."
+                time.sleep(5)
+        except (IOError, Exception) as e:
+            print "Function %s raised an exception, exiting..." % func.__name__
             print e
             exit(1)
     return inner
@@ -130,23 +146,22 @@ class LavaConnection(object):
         self.configuration = configuration
         self.connection = None
 
-    @exit_on_throw
+    @handle_connection
     def connect(self):
         url = self.configuration.construct_url()
         print "Connecting to Server..."
         self.connection = xmlrpclib.ServerProxy(url)
+        # Here we make a call to ensure the connection has been made.
+        self.connection.system.listMethods()
+        print "Connection Successful."
 
-        print "Connection Successful!"
-        print "connect-to-server : pass"
-
-    @exit_on_throw
+    @handle_connection
     def get_job_status(self, job_id):
         return self.connection.scheduler.job_status(job_id)
 
-    @exit_on_throw
+    @handle_connection
     def get_job_output(self, job_id):
         return self.connection.scheduler.job_output(job_id)
-
 
 class LavaRunJob(object):
     def __init__(self, connection, job_id):
@@ -170,7 +185,12 @@ class LavaRunJob(object):
             new_output = full_output[len(self.printed_output):]
         else:
             new_output = full_output
-        print new_output,
+        if new_output == 'None':
+            print "No job output..."
+        elif new_output == '':
+            pass
+        else:
+            print new_output
         self.printed_output = full_output
 
     def run(self):
@@ -179,15 +199,11 @@ class LavaRunJob(object):
         self.connection.connect()
 
         while is_running:
-            try:
-                self.print_output()
-                time.sleep(2)
-            except (xmlrpclib.ProtocolError, xmlrpclib.Fault, IOError):
-                pass
-
+            self.print_output()
+            time.sleep(2)
             is_running = self.is_running()
 
-        print 'Job has finished'
+        print "Job has finished."
 
 
 def get_config(args):
