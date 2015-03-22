@@ -231,3 +231,5 @@ if __name__ == '__main__':
     parser.add_argument("--job", help="job to fetch console log from")
     args = vars(parser.parse_args())
     main(args)
+
+# vim: set sw=4 sts=4 et fileencoding=utf-8 :
