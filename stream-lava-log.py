@@ -15,11 +15,49 @@
 #
 # Copyright Tyler Baker 2015
 
+import os
+import sys
 import argparse
 import urlparse
 import time
 import xmlrpclib
-import ConfigParser, os
+import ConfigParser
+
+
+class FileOutputHandler(object):
+    def __init__(self, file_obj, outputter):
+        self.file_obj = file_obj
+        self.outputter = outputter
+
+        self.full_output = ""
+        self.printed_output = self.full_output
+
+
+    def run(self, poll_interval):
+        while True:
+            self._update_output()
+
+            if not self.outputter.is_running(): break
+
+            time.sleep(poll_interval)
+
+        print "Job has finished."
+
+
+    def _update_output(self):
+        self.full_output = str(self.outputter.get_output())
+        if self.printed_output:
+            new_output = self.full_output[len(self.printed_output):]
+        else:
+            new_output = self.full_output
+        if new_output == 'None':
+            self.file_obj.write("No job output...\n")
+        elif new_output == '':
+            pass
+        else:
+            self.file_obj.write(new_output)
+        self.printed_output = self.full_output
+
 
 class Config(object):
     def __init__(self, config_sources=None):
@@ -167,43 +205,20 @@ class LavaRunJob(object):
     def __init__(self, connection, job_id):
         self.END_STATES = ['Complete', 'Incomplete', 'Canceled']
         self.job_id = job_id
-        self.printed_output = None
         self.connection = connection
+        self.poll_interval = 2
 
     def _get_status(self):
         return self.connection.get_job_status(self.job_id)['job_status']
 
-    def _get_output(self):
+    def get_output(self):
         return self.connection.get_job_output(self.job_id)
 
     def is_running(self):
         return self._get_status() not in self.END_STATES
 
-    def print_output(self):
-        full_output = str(self._get_output())
-        if self.printed_output:
-            new_output = full_output[len(self.printed_output):]
-        else:
-            new_output = full_output
-        if new_output == 'None':
-            print "No job output..."
-        elif new_output == '':
-            pass
-        else:
-            print new_output
-        self.printed_output = full_output
-
-    def run(self):
-        is_running = True
-
+    def connect(self):
         self.connection.connect()
-
-        while is_running:
-            self.print_output()
-            time.sleep(2)
-            is_running = self.is_running()
-
-        print "Job has finished."
 
 
 def get_config(args):
@@ -215,9 +230,13 @@ def get_config(args):
 def main(args):
     config = get_config(args)
     lava_connection = LavaConnection(config)
-    lava_job = LavaRunJob(lava_connection, config.get_config_variable('job'))
 
-    lava_job.run()
+    lava_job = LavaRunJob(lava_connection,
+                          config.get_config_variable('job'))
+    lava_job.connect()
+
+    output_handler = FileOutputHandler(sys.stdout, lava_job)
+    output_handler.run(2)
 
     exit(0)
 
