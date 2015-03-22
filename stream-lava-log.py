@@ -170,17 +170,17 @@ class LavaRunJob(object):
         self.printed_output = None
         self.connection = connection
 
-    def get_status(self):
+    def _get_status(self):
         return self.connection.get_job_status(self.job_id)['job_status']
 
-    def get_output(self):
+    def _get_output(self):
         return self.connection.get_job_output(self.job_id)
 
     def is_running(self):
-        return self.get_status() not in self.END_STATES
+        return self._get_status() not in self.END_STATES
 
     def print_output(self):
-        full_output = str(self.get_output())
+        full_output = str(self._get_output())
         if self.printed_output:
             new_output = full_output[len(self.printed_output):]
         else:
