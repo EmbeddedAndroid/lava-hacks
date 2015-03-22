@@ -22,6 +22,9 @@ import urlparse
 import time
 import xmlrpclib
 import ConfigParser
+import curses
+
+from text_output import TextBlock
 
 
 class FileOutputHandler(object):
@@ -57,6 +60,63 @@ class FileOutputHandler(object):
         else:
             self.file_obj.write(new_output)
         self.printed_output = self.full_output
+
+
+class CursesOutput(object):
+    def __init__(self, outputter, follow=True):
+        self.outputter = outputter
+        self.textblock = TextBlock()
+        self.follow = follow
+
+        self.win_height = 0
+        self.win_width = 0
+        self.cur_line = 0
+        self.last_poll_time = 0
+
+
+    def run(self, poll_interval):
+        curses.wrapper(self._run, poll_interval)
+
+
+    def _run(self, stdscr, poll_interval=2):
+        self.stdscr = stdscr
+        while True:
+            self.win_height, self.win_width = self.stdscr.getmaxyx()
+
+            self._update_output(poll_interval)
+            self._refresh()
+
+            #if not self.outputter.is_running(): break
+
+            time.sleep(poll_interval)
+
+
+    def _update_output(self, poll_interval):
+        if time.time() < self.last_poll_time + poll_interval:
+            return
+
+        self.output = self.outputter.get_output()
+        self.textblock.set_width(self.win_width, reflow=False)
+        self.textblock.set_text(self.output)
+        self.last_poll_time = time.time()
+
+
+    def _refresh(self):
+        self.stdscr.clear()
+        output_lines = None
+        if self.follow:
+            output_lines = self.textblock.get_block(-1, self.win_height)
+        else:
+            output_lines = self.textblock.get_block(self.cur_line, self.win_height)
+
+        print output_lines
+        self._print_lines(output_lines)
+
+
+    def _print_lines(self, lines):
+        for index, line in enumerate(lines):
+            self.stdscr.addstr(index, 0, line)
+        self.stdscr.refresh()
 
 
 class Config(object):
@@ -235,10 +295,15 @@ def main(args):
                           config.get_config_variable('job'))
     lava_job.connect()
 
-    output_handler = FileOutputHandler(sys.stdout, lava_job)
+    if args["curses"]:
+        output_handler = CursesOutput(lava_job)
+    else:
+        output_handler = FileOutputHandler(sys.stdout, lava_job)
+
     output_handler.run(2)
 
     exit(0)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -248,6 +313,7 @@ if __name__ == '__main__':
     parser.add_argument("--token", help="token for LAVA server api")
     parser.add_argument("--server", help="server url for LAVA server")
     parser.add_argument("--job", help="job to fetch console log from")
+    parser.add_argument("--curses", help="use curses for output", action="store_true")
     args = vars(parser.parse_args())
     main(args)
 
