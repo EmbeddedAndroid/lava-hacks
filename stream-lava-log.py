@@ -105,7 +105,6 @@ class CursesOutput(object):
 
 
     def _refresh(self):
-        self.stdscr.clear()
         output_lines = None
         if self.follow:
             output_lines = self.textblock.get_block(-1, self.win_height)
@@ -116,6 +115,7 @@ class CursesOutput(object):
 
 
     def _print_lines(self, lines):
+        self.stdscr.clear()
         for index, line in enumerate(lines):
             self.stdscr.addstr(index, 0, line)
         self.stdscr.refresh()
