@@ -19,6 +19,7 @@ import os
 import sys
 import argparse
 import urlparse
+import datetime
 import time
 import xmlrpclib
 import ConfigParser
@@ -71,7 +72,9 @@ class CursesOutput(object):
         self.win_height = 0
         self.win_width = 0
         self.cur_line = 0
-        self.last_poll_time = 0
+        self.last_poll_time = None
+        self.next_poll_time = datetime.datetime.now()
+        self.finished = False
 
 
     def run(self, poll_interval):
@@ -83,22 +86,22 @@ class CursesOutput(object):
         while True:
             self.win_height, self.win_width = self.stdscr.getmaxyx()
 
-            self._update_output(poll_interval)
-            self._refresh()
+            if not self.finished and datetime.datetime.now() > self.next_poll_time:
+                self._update_output(poll_interval)
+                self._refresh()
+                self.last_poll_time = self.next_poll_time
+                self.next_poll_time = self.last_poll_time + datetime.timedelta(seconds=poll_interval)
 
-            #if not self.outputter.is_running(): break
+            if not self.outputter.is_running():
+                self.finished = True
 
-            time.sleep(poll_interval)
+            time.sleep(0.1)
 
 
     def _update_output(self, poll_interval):
-        if time.time() < self.last_poll_time + poll_interval:
-            return
-
         self.output = self.outputter.get_output()
         self.textblock.set_width(self.win_width, reflow=False)
         self.textblock.set_text(self.output)
-        self.last_poll_time = time.time()
 
 
     def _refresh(self):
@@ -231,7 +234,6 @@ def handle_connection(func):
             if e.faultCode == 404 and e.faultString == \
                     "Job output not found.":
                 print "Waiting for job output..."
-                time.sleep(5)
         except (IOError, Exception) as e:
             print "Function %s raised an exception, exiting..." % func.__name__
             print e
