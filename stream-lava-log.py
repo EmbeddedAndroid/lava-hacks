@@ -112,7 +112,6 @@ class CursesOutput(object):
         else:
             output_lines = self.textblock.get_block(self.cur_line, self.win_height)
 
-        print output_lines
         self._print_lines(output_lines)
 
 
