@@ -260,24 +260,86 @@ class LavaConnection(object):
     def get_job_output(self, job_id):
         return self.connection.scheduler.job_output(job_id)
 
+
 class LavaRunJob(object):
     def __init__(self, connection, job_id):
         self.END_STATES = ['Complete', 'Incomplete', 'Canceled']
         self.job_id = job_id
         self.connection = connection
         self.poll_interval = 2
+        self.state = dict()
+        self.details = dict()
+        self.actions = list()
 
-    def _get_status(self):
-        return self.connection.get_job_status(self.job_id)['job_status']
+    def get_description(self):
+        self._get_details()
+        return self.details.get('description', '')
+
+    def get_hostname(self):
+        self._get_details()
+        return self.details.get('hostname', '')
+
+    def get_device_type_id(self):
+        self._get_details()
+        return self.details.get('device_type_id', '')
 
     def get_output(self):
-        return self.connection.get_job_output(self.job_id) or ""
+        self.output = str(self.connection.get_job_output(self.job_id)) or ""
+        self._parse_output()
+        return self.output
 
     def is_running(self):
-        return self._get_status() not in self.END_STATES
+        self.state = self.connection.get_job_status(self.job_id)
+        return self.state['job_status'] not in self.END_STATES
+
+    def last_action(self):
+        if not self.actions:
+            return "-"
+        return self.actions[-1]
+
+    def all_actions(self):
+        return self.actions
 
     def connect(self):
         self.connection.connect()
+
+    def _get_details(self):
+        details = self.connection.get_job_details(self.job_id)
+
+        description = details.get('description', None)
+        if description:
+            self.details['description'] = description
+
+        device_cache = details.get('_actual_device_cache', None)
+        if device_cache:
+            hostname = device_cache.get('hostname', None)
+            if hostname:
+                self.details['hostname'] = hostname
+
+            device_type_id = device_cache.get('device_type_id', None)
+            if device_type_id:
+                self.details['device_type_id'] = device_type_id
+
+    def _parse_output(self):
+        del self.actions[:]
+        for line in self.output.splitlines():
+            if 'ACTION-B' in line:
+                self.actions.append(self._parse_actions(line))
+
+    def _parse_actions(self, line):
+        substr = line[line.find('ACTION-B')+len('ACTION-B')+2:]
+        if substr.startswith('deploy_linaro_'):
+            deployment_elems = list()
+            re_elems = re.compile('u\'[a-z]+\'')
+            for elem in re_elems.findall(substr):
+                deployment_elems.append(elem[2:-1])
+            return "deploy " + ','.join(deployment_elems)
+        elif substr.startswith('lava_test_shell'):
+            substr = substr[substr.find('testdef\': u')+len('testdef\': u')+1:]
+            substr = substr[:substr.find('.yaml')]
+            return "test_shell " + substr
+
+        return "unknown (%s)" % substr[:substr.find(' ')]
 
 
 def get_config(args):
