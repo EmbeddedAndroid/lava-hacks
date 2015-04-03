@@ -54,10 +54,8 @@ class FileOutputHandler(object):
             new_output = self.full_output[len(self.printed_output):]
         else:
             new_output = self.full_output
-        if new_output == 'None':
+        if not self.full_output:
             self.file_obj.write("No job output...\n")
-        elif new_output == '':
-            pass
         else:
             self.file_obj.write(new_output)
         self.printed_output = self.full_output
