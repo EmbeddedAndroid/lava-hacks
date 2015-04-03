@@ -272,7 +272,7 @@ class LavaRunJob(object):
         return self.connection.get_job_status(self.job_id)['job_status']
 
     def get_output(self):
-        return self.connection.get_job_output(self.job_id)
+        return self.connection.get_job_output(self.job_id) or ""
 
     def is_running(self):
         return self._get_status() not in self.END_STATES
