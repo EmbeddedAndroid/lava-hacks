@@ -24,6 +24,7 @@ import time
 import xmlrpclib
 import ConfigParser
 import curses
+import re
 
 from text_output import TextBlock
 
@@ -49,7 +50,7 @@ class FileOutputHandler(object):
 
 
     def _update_output(self):
-        self.full_output = str(self.outputter.get_output())
+        self.full_output = self.outputter.get_output()
         if self.printed_output:
             new_output = self.full_output[len(self.printed_output):]
         else:
@@ -58,6 +59,7 @@ class FileOutputHandler(object):
             self.file_obj.write("No job output...\n")
         else:
             self.file_obj.write(new_output)
+            self.file_obj.flush()
         self.printed_output = self.full_output
 
 
@@ -73,6 +75,8 @@ class CursesOutput(object):
         self.last_poll_time = None
         self.next_poll_time = datetime.datetime.now()
         self.finished = False
+        self.status_win = None
+        self.state_win_height = 2
 
 
     def run(self, poll_interval):
@@ -81,19 +85,45 @@ class CursesOutput(object):
 
     def _run(self, stdscr, poll_interval=2):
         self.stdscr = stdscr
+        self._setup_win()
+
         while True:
-            self.win_height, self.win_width = self.stdscr.getmaxyx()
+            self._update_win()
+
+            details = "description: %s" % self.outputter.get_description()
+            details += "   device_type: %s" % self.outputter.get_device_type_id()
+            details += "   hostname: %s" % self.outputter.get_hostname()
+            self.status_win.addstr(0, 0, details[:self.win_width-1])
+
+            status = "active: %s" % self.outputter.is_running()
+            status += "   action: %s" % self.outputter.last_action()
+            self.status_win.addstr(1, 0, status[:self.win_width-1])
 
             if not self.finished and datetime.datetime.now() > self.next_poll_time:
                 self._update_output(poll_interval)
-                self._refresh()
                 self.last_poll_time = self.next_poll_time
                 self.next_poll_time = self.last_poll_time + datetime.timedelta(seconds=poll_interval)
 
-            if not self.outputter.is_running():
-                self.finished = True
+                if not self.outputter.is_running():
+                    self.finished = True
 
+
+            self._refresh()
             time.sleep(0.1)
+
+
+    def _setup_win(self):
+        self.win_height, self.win_width = self.stdscr.getmaxyx()
+        self.status_win = curses.newwin(self.state_win_height, self.win_width, self.win_height-self.state_win_height, 0)
+        self.status_win.bkgdset(' ', curses.A_REVERSE)
+
+    def _update_win(self):
+        win_height, win_width = self.stdscr.getmaxyx()
+        if win_height != self.win_height or win_width != self.win_width:
+            self.win_height = win_height
+            self.win_width = win_width
+            self.status_win.mvwin(self.win_height-self.state_win_height, 0)
+            self.status_win.resize(self.state_win_height, self.win_width)
 
 
     def _update_output(self, poll_interval):
@@ -105,18 +135,20 @@ class CursesOutput(object):
     def _refresh(self):
         output_lines = None
         if self.follow:
-            output_lines = self.textblock.get_block(-1, self.win_height)
+            output_lines = self.textblock.get_block(-1, self.win_height-self.state_win_height)
         else:
-            output_lines = self.textblock.get_block(self.cur_line, self.win_height)
+            output_lines = self.textblock.get_block(self.cur_line, self.win_height-self.state_win_height)
 
         self._print_lines(output_lines)
 
 
     def _print_lines(self, lines):
-        self.stdscr.clear()
+        self.stdscr.clearok(True)
+        self.status_win.clearok(True)
         for index, line in enumerate(lines):
             self.stdscr.addstr(index, 0, line)
         self.stdscr.refresh()
+        self.status_win.refresh()
 
 
 class Config(object):
@@ -255,6 +287,10 @@ class LavaConnection(object):
     @handle_connection
     def get_job_status(self, job_id):
         return self.connection.scheduler.job_status(job_id)
+
+    @handle_connection
+    def get_job_details(self, job_id):
+        return self.connection.scheduler.job_details(job_id)
 
     @handle_connection
     def get_job_output(self, job_id):
