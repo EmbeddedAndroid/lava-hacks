@@ -126,10 +126,9 @@ class CursesOutput(object):
         old_output_len = len(self.output)
 
         self.output = self.outputter.get_output()
-        self.textblock.set_width(self.win_width, reflow=False)
-        self.textblock.set_text(self.output)
 
         if len(self.output) != old_output_len:
+            self.textblock.set_text(self.output, reflow=False)
             self.text_changed = True
 
 
@@ -137,11 +136,13 @@ class CursesOutput(object):
         if self.text_changed or self.win_changed:
             output_lines = None
 
+            self.textblock.reflow()
             if self.follow:
                 output_lines = self.textblock.get_block(-1, self.win_height-self.state_win_height)
             else:
                 output_lines = self.textblock.get_block(self.cur_line, self.win_height-self.state_win_height)
 
+            self.stdscr.clear()
             self._draw_text(output_lines)
 
             self.win_changed = False
