@@ -53,6 +53,7 @@ class FileOutputHandler(object):
     def _update_output(self):
         self.full_output = self.outputter.get_output()
 
+
     def _print_output(self):
         if not self.full_output:
             self.file_obj.write("No job output...\n")
@@ -105,6 +106,7 @@ class CursesOutput(object):
         self.status_win.bkgdset(' ', curses.A_REVERSE)
         self.textblock.set_width(self.win_width, reflow=False)
         self.win_changed = True
+
 
     def _update_win(self):
         if curses.is_term_resized(self.win_height, self.win_width):
@@ -161,6 +163,7 @@ class CursesOutput(object):
         for index, line in enumerate(lines):
             self.stdscr.addstr(index, 0, line)
 
+
     def _refresh(self):
         self.stdscr.refresh()
         self.status_win.refresh()
@@ -170,13 +173,16 @@ class Config(object):
     def __init__(self, config_sources=None):
         self.config_sources = config_sources or list()
 
+
     def add_config_override(self, config_source):
         self.config_sources.insert(0, config_source)
+
 
     def has_enough_config(self):
         return (self.get_config_variable('username') and
                 self.get_config_variable('token') and
                 self.get_config_variable('server'))
+
 
     def construct_url(self):
         if not self.has_enough_config():
@@ -192,6 +198,7 @@ class Config(object):
                 self.get_config_variable('username') + ':' +
                 self.get_config_variable('token') +
                 '@' + url.netloc + url.path)
+
 
     def get_config_variable(self, variable_name):
         for config_source in self.config_sources:
@@ -216,6 +223,7 @@ class FileConfigParser(object):
         self.token = None
         self.server = None
 
+
     def get_username(self):
         if self.username: return self.username
 
@@ -223,12 +231,14 @@ class FileConfigParser(object):
             self.username = self.config_parser.get(self.section, 'username')
         return self.username
 
+
     def get_token(self):
         if self.token: return self.token
 
         if self.config_parser:
             self.token = self.config_parser.get(self.section, 'token')
         return self.token
+
 
     def get_server(self):
         if self.server: return self.server
@@ -238,7 +248,6 @@ class FileConfigParser(object):
         return self.server
 
 
-
 class ArgumentParser(object):
     def __init__(self, args):
         self.username = args.get('username')
@@ -246,14 +255,18 @@ class ArgumentParser(object):
         self.server = args.get('server')
         self.job = args.get('job')
 
+
     def get_username(self):
         return self.username
+
 
     def get_token(self):
         return self.token
 
+
     def get_server(self):
         return self.server
+
 
     def get_job(self):
         return self.job
@@ -290,6 +303,7 @@ class LavaConnection(object):
         self.configuration = configuration
         self.connection = None
 
+
     @handle_connection
     def connect(self):
         url = self.configuration.construct_url()
@@ -299,13 +313,16 @@ class LavaConnection(object):
         self.connection.system.listMethods()
         print "Connection Successful."
 
+
     @handle_connection
     def get_job_status(self, job_id):
         return self.connection.scheduler.job_status(job_id)
 
+
     @handle_connection
     def get_job_details(self, job_id):
         return self.connection.scheduler.job_details(job_id)
+
 
     @handle_connection
     def get_job_output(self, job_id):
@@ -327,36 +344,45 @@ class LavaRunJob(object):
         self.next_poll_time = datetime.datetime.now()
         self._is_running = True
 
+
     def get_description(self):
         self._get_state()
         return self.details.get('description', '')
+
 
     def get_hostname(self):
         self._get_state()
         return self.details.get('hostname', '')
 
+
     def get_device_type_id(self):
         self._get_state()
         return self.details.get('device_type_id', '')
+
 
     def get_output(self):
         self._get_state()
         return self.output
 
+
     def is_running(self):
         self._get_state()
         return self._is_running
+
 
     def last_action(self):
         if not self.actions:
             return "-"
         return self.actions[-1]
 
+
     def all_actions(self):
         return self.actions
 
+
     def connect(self):
         self.connection.connect()
+
 
     def _get_state(self):
         if self._is_running and datetime.datetime.now() > self.next_poll_time:
@@ -377,8 +403,8 @@ class LavaRunJob(object):
 
             self._is_running = self.state['job_status'] not in self.END_STATES
 
-    def _parse_details(self):
 
+    def _parse_details(self):
         description = self.raw_details.get('description', None)
         if description:
             self.details['description'] = description
@@ -393,11 +419,13 @@ class LavaRunJob(object):
             if device_type_id:
                 self.details['device_type_id'] = device_type_id
 
+
     def _parse_output(self):
         del self.actions[:]
         for line in self.output.splitlines():
             if 'ACTION-B' in line:
                 self.actions.append(self._parse_actions(line))
+
 
     def _parse_actions(self, line):
         substr = line[line.find('ACTION-B')+len('ACTION-B')+2:]
