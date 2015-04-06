@@ -73,7 +73,6 @@ class CursesOutput(object):
         self.win_width = 0
         self.win_changed = False
         self.cur_line = 0
-        self.finished = False
         self.status_win = None
         self.state_win_height = 2
         self.output = ""
@@ -91,9 +90,6 @@ class CursesOutput(object):
         while True:
             self._update_win()
             self._poll_state()
-
-            if not self.outputter.is_running():
-                self.finished = True
 
             self._redraw_output()
             self._redraw_status()
