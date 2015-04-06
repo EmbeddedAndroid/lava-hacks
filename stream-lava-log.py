@@ -90,22 +90,13 @@ class CursesOutput(object):
 
         while True:
             self._update_win()
-
-            details = "description: %s" % self.outputter.get_description()
-            details += "   device_type: %s" % self.outputter.get_device_type_id()
-            details += "   hostname: %s" % self.outputter.get_hostname()
-            self.status_win.addstr(0, 0, details[:self.win_width-1])
-
-            status = "active: %s" % self.outputter.is_running()
-            status += "   action: %s" % self.outputter.last_action()
-            self.status_win.addstr(1, 0, status[:self.win_width-1])
-
             self._update_output()
 
             if not self.outputter.is_running():
                 self.finished = True
 
             self._redraw_output()
+            self._redraw_status()
 
             self._refresh()
             time.sleep(0.1)
@@ -155,6 +146,17 @@ class CursesOutput(object):
 
             self.win_changed = False
             self.text_changed = False
+
+
+    def _redraw_status(self):
+        details = "description: %s" % self.outputter.get_description()
+        details += "   device_type: %s" % self.outputter.get_device_type_id()
+        details += "   hostname: %s" % self.outputter.get_hostname()
+        self.status_win.addstr(0, 0, details[:self.win_width-1])
+
+        status = "active: %s" % self.outputter.is_running()
+        status += "   action: %s" % self.outputter.last_action()
+        self.status_win.addstr(1, 0, status[:self.win_width-1])
 
 
     def _draw_text(self, lines):
