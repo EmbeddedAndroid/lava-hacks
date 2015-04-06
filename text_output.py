@@ -33,19 +33,19 @@ class TextBlock(object):
     def set_width(self, width, reflow=True):
         self.width = width
 
-        if reflow: self._reflow()
+        if reflow: self.reflow()
 
 
     def set_text(self, text, reflow=True):
         self.text = str(text)
 
-        if reflow: self._reflow()
+        if reflow: self.reflow()
 
 
     def append_text(self, new_text, reflow=True):
         self.text += str(text)
 
-        if reflow: self._reflow()
+        if reflow: self.reflow()
 
 
     def get_block(self, start_line, num_lines):
@@ -58,7 +58,7 @@ class TextBlock(object):
         return self.block[start_line:start_line+num_lines]
 
 
-    def _reflow(self, width=0):
+    def reflow(self, width=0):
         if not self.width:
             raise Exception("Cannot reflow to windows of width %d" % self.width)
 
