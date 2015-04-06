@@ -76,6 +76,8 @@ class CursesOutput(object):
         self.finished = False
         self.status_win = None
         self.state_win_height = 2
+        self.output = ""
+        self.text_changed = False
 
 
     def run(self):
@@ -129,21 +131,28 @@ class CursesOutput(object):
 
 
     def _update_output(self):
+        old_output_len = len(self.output)
+
         self.output = self.outputter.get_output()
         self.textblock.set_width(self.win_width, reflow=False)
         self.textblock.set_text(self.output)
 
+        if len(self.output) != old_output_len:
+            self.text_changed = True
+
 
     def _refresh(self):
-        output_lines = None
-        if self.follow:
-            output_lines = self.textblock.get_block(-1, self.win_height-self.state_win_height)
-        else:
-            output_lines = self.textblock.get_block(self.cur_line, self.win_height-self.state_win_height)
+        if self.text_changed or self.win_changed:
+            output_lines = None
+            if self.follow:
+                output_lines = self.textblock.get_block(-1, self.win_height-self.state_win_height)
+            else:
+                output_lines = self.textblock.get_block(self.cur_line, self.win_height-self.state_win_height)
 
-        self._print_lines(output_lines)
+            self._print_lines(output_lines)
 
-        self.win_changed = False
+            self.win_changed = False
+            self.text_changed = False
 
 
     def _print_lines(self, lines):
