@@ -262,7 +262,7 @@ def handle_connection(func):
         except xmlrpclib.Fault as e:
             if e.faultCode == 404 and e.faultString == \
                     "Job output not found.":
-                print "Waiting for job output..."
+                pass
         except (IOError, Exception) as e:
             print "Function %s raised an exception, exiting..." % func.__name__
             print e
