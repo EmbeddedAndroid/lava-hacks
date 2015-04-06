@@ -90,7 +90,7 @@ class CursesOutput(object):
 
         while True:
             self._update_win()
-            self._update_output()
+            self._poll_state()
 
             if not self.outputter.is_running():
                 self.finished = True
@@ -122,7 +122,7 @@ class CursesOutput(object):
             self.win_changed = True
 
 
-    def _update_output(self):
+    def _poll_state(self):
         old_output_len = len(self.output)
 
         self.output = self.outputter.get_output()
