@@ -307,6 +307,7 @@ class LavaRunJob(object):
         self.details = dict()
         self.raw_details = dict()
         self.actions = list()
+        self._is_running = True
 
     def get_description(self):
         self._get_state()
@@ -332,8 +333,8 @@ class LavaRunJob(object):
         return self.output
 
     def is_running(self):
-        self.state = self.connection.get_job_status(self.job_id)
-        return self.state['job_status'] not in self.END_STATES
+        self._get_state()
+        return self._is_running
 
     def last_action(self):
         if not self.actions:
@@ -347,8 +348,11 @@ class LavaRunJob(object):
         self.connection.connect()
 
     def _get_state(self):
+        self.state = self.connection.get_job_status(self.job_id)
         self.raw_details = self.connection.get_job_details(self.job_id)
         self._parse_details()
+
+        self._is_running = self.state['job_status'] not in self.END_STATES
 
     def _parse_details(self):
 
