@@ -151,15 +151,13 @@ class CursesOutput(object):
             else:
                 output_lines = self.textblock.get_block(self.cur_line, self.win_height-self.state_win_height)
 
-            self._print_lines(output_lines)
+            self._draw_text(output_lines)
 
             self.win_changed = False
             self.text_changed = False
 
 
-    def _print_lines(self, lines):
-        self.stdscr.clearok(True)
-        self.status_win.clearok(True)
+    def _draw_text(self, lines):
         for index, line in enumerate(lines):
             self.stdscr.addstr(index, 0, line)
 
