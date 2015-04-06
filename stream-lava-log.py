@@ -305,6 +305,7 @@ class LavaRunJob(object):
         self.poll_interval = 2
         self.state = dict()
         self.details = dict()
+        self.raw_details = dict()
         self.actions = list()
 
     def get_description(self):
@@ -345,14 +346,17 @@ class LavaRunJob(object):
     def connect(self):
         self.connection.connect()
 
-    def _get_details(self):
-        details = self.connection.get_job_details(self.job_id)
+    def _get_state(self):
+        self.raw_details = self.connection.get_job_details(self.job_id)
 
-        description = details.get('description', None)
+    def _get_details(self):
+        self._get_state()
+
+        description = self.raw_details.get('description', None)
         if description:
             self.details['description'] = description
 
-        device_cache = details.get('_actual_device_cache', None)
+        device_cache = self.raw_details.get('_actual_device_cache', None)
         if device_cache:
             hostname = device_cache.get('hostname', None)
             if hostname:
