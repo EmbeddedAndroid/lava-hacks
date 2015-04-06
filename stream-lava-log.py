@@ -320,7 +320,13 @@ class LavaRunJob(object):
         return self.details.get('device_type_id', '')
 
     def get_output(self):
-        self.output = str(self.connection.get_job_output(self.job_id)) or ""
+        self.output = self.connection.get_job_output(self.job_id)
+
+        if not self.output:
+            self.output = ""
+        else:
+            self.output = str(self.output)
+
         self._parse_output()
         return self.output
 
