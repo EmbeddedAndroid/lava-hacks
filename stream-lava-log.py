@@ -302,7 +302,8 @@ class LavaRunJob(object):
         self.END_STATES = ['Complete', 'Incomplete', 'Canceled']
         self.job_id = job_id
         self.connection = connection
-        self.poll_interval = 2
+        self.poll_interval = poll_interval or 2
+        self.output = ""
         self.state = dict()
         self.details = dict()
         self.raw_details = dict()
@@ -322,14 +323,7 @@ class LavaRunJob(object):
         return self.details.get('device_type_id', '')
 
     def get_output(self):
-        self.output = self.connection.get_job_output(self.job_id)
-
-        if not self.output:
-            self.output = ""
-        else:
-            self.output = str(self.output)
-
-        self._parse_output()
+        self._get_state()
         return self.output
 
     def is_running(self):
@@ -350,6 +344,14 @@ class LavaRunJob(object):
     def _get_state(self):
         self.state = self.connection.get_job_status(self.job_id)
         self.raw_details = self.connection.get_job_details(self.job_id)
+        self.output = self.connection.get_job_output(self.job_id)
+
+        if not self.output:
+            self.output = ""
+        else:
+            self.output = str(self.output)
+
+        self._parse_output()
         self._parse_details()
 
         self._is_running = self.state['job_status'] not in self.END_STATES
