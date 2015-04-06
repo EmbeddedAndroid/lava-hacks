@@ -105,6 +105,7 @@ class CursesOutput(object):
             if not self.outputter.is_running():
                 self.finished = True
 
+            self._redraw_output()
 
             self._refresh()
             time.sleep(0.1)
@@ -141,9 +142,10 @@ class CursesOutput(object):
             self.text_changed = True
 
 
-    def _refresh(self):
+    def _redraw_output(self):
         if self.text_changed or self.win_changed:
             output_lines = None
+
             if self.follow:
                 output_lines = self.textblock.get_block(-1, self.win_height-self.state_win_height)
             else:
@@ -160,6 +162,8 @@ class CursesOutput(object):
         self.status_win.clearok(True)
         for index, line in enumerate(lines):
             self.stdscr.addstr(index, 0, line)
+
+    def _refresh(self):
         self.stdscr.refresh()
         self.status_win.refresh()
 
