@@ -38,13 +38,13 @@ class FileOutputHandler(object):
         self.printed_output = self.full_output
 
 
-    def run(self, poll_interval):
+    def run(self):
         while True:
             self._update_output()
 
             if not self.outputter.is_running(): break
 
-            time.sleep(poll_interval)
+            time.sleep(2)
 
         print "Job has finished."
 
@@ -72,18 +72,16 @@ class CursesOutput(object):
         self.win_height = 0
         self.win_width = 0
         self.cur_line = 0
-        self.last_poll_time = None
-        self.next_poll_time = datetime.datetime.now()
         self.finished = False
         self.status_win = None
         self.state_win_height = 2
 
 
-    def run(self, poll_interval):
-        curses.wrapper(self._run, poll_interval)
+    def run(self):
+        curses.wrapper(self._run)
 
 
-    def _run(self, stdscr, poll_interval=2):
+    def _run(self, stdscr):
         self.stdscr = stdscr
         self._setup_win()
 
@@ -99,13 +97,10 @@ class CursesOutput(object):
             status += "   action: %s" % self.outputter.last_action()
             self.status_win.addstr(1, 0, status[:self.win_width-1])
 
-            if not self.finished and datetime.datetime.now() > self.next_poll_time:
-                self._update_output(poll_interval)
-                self.last_poll_time = self.next_poll_time
-                self.next_poll_time = self.last_poll_time + datetime.timedelta(seconds=poll_interval)
+            self._update_output()
 
-                if not self.outputter.is_running():
-                    self.finished = True
+            if not self.outputter.is_running():
+                self.finished = True
 
 
             self._refresh()
@@ -126,7 +121,7 @@ class CursesOutput(object):
             self.status_win.resize(self.state_win_height, self.win_width)
 
 
-    def _update_output(self, poll_interval):
+    def _update_output(self):
         self.output = self.outputter.get_output()
         self.textblock.set_width(self.win_width, reflow=False)
         self.textblock.set_text(self.output)
@@ -298,7 +293,7 @@ class LavaConnection(object):
 
 
 class LavaRunJob(object):
-    def __init__(self, connection, job_id):
+    def __init__(self, connection, job_id, poll_interval):
         self.END_STATES = ['Complete', 'Incomplete', 'Canceled']
         self.job_id = job_id
         self.connection = connection
@@ -308,6 +303,8 @@ class LavaRunJob(object):
         self.details = dict()
         self.raw_details = dict()
         self.actions = list()
+        self.last_poll_time = None
+        self.next_poll_time = datetime.datetime.now()
         self._is_running = True
 
     def get_description(self):
@@ -342,19 +339,23 @@ class LavaRunJob(object):
         self.connection.connect()
 
     def _get_state(self):
-        self.state = self.connection.get_job_status(self.job_id)
-        self.raw_details = self.connection.get_job_details(self.job_id)
-        self.output = self.connection.get_job_output(self.job_id)
+        if self._is_running and datetime.datetime.now() > self.next_poll_time:
+            self.state = self.connection.get_job_status(self.job_id)
+            self.raw_details = self.connection.get_job_details(self.job_id)
+            self.output = self.connection.get_job_output(self.job_id)
 
-        if not self.output:
-            self.output = ""
-        else:
-            self.output = str(self.output)
+            self.last_poll_time = self.next_poll_time
+            self.next_poll_time = self.last_poll_time + datetime.timedelta(seconds=self.poll_interval)
 
-        self._parse_output()
-        self._parse_details()
+            if not self.output:
+                self.output = ""
+            else:
+                self.output = str(self.output)
 
-        self._is_running = self.state['job_status'] not in self.END_STATES
+            self._parse_output()
+            self._parse_details()
+
+            self._is_running = self.state['job_status'] not in self.END_STATES
 
     def _parse_details(self):
 
@@ -405,7 +406,8 @@ def main(args):
     lava_connection = LavaConnection(config)
 
     lava_job = LavaRunJob(lava_connection,
-                          config.get_config_variable('job'))
+                          config.get_config_variable('job'),
+                          2)
     lava_job.connect()
 
     if args["curses"]:
@@ -413,7 +415,7 @@ def main(args):
     else:
         output_handler = FileOutputHandler(sys.stdout, lava_job)
 
-    output_handler.run(2)
+    output_handler.run()
 
     exit(0)
 
