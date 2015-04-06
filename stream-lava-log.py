@@ -71,6 +71,7 @@ class CursesOutput(object):
 
         self.win_height = 0
         self.win_width = 0
+        self.win_changed = False
         self.cur_line = 0
         self.finished = False
         self.status_win = None
@@ -111,14 +112,20 @@ class CursesOutput(object):
         self.win_height, self.win_width = self.stdscr.getmaxyx()
         self.status_win = curses.newwin(self.state_win_height, self.win_width, self.win_height-self.state_win_height, 0)
         self.status_win.bkgdset(' ', curses.A_REVERSE)
+        self.textblock.set_width(self.win_width, reflow=False)
+        self.win_changed = True
 
     def _update_win(self):
-        win_height, win_width = self.stdscr.getmaxyx()
-        if win_height != self.win_height or win_width != self.win_width:
-            self.win_height = win_height
-            self.win_width = win_width
-            self.status_win.mvwin(self.win_height-self.state_win_height, 0)
+        if curses.is_term_resized(self.win_height, self.win_width):
+            self.win_height, self.win_width = self.stdscr.getmaxyx()
+            curses.resizeterm(self.win_height, self.win_width)
+
             self.status_win.resize(self.state_win_height, self.win_width)
+            self.status_win.mvwin(self.win_height-self.state_win_height, 0)
+
+            self.textblock.set_width(self.win_width, reflow=False)
+
+            self.win_changed = True
 
 
     def _update_output(self):
@@ -135,6 +142,8 @@ class CursesOutput(object):
             output_lines = self.textblock.get_block(self.cur_line, self.win_height-self.state_win_height)
 
         self._print_lines(output_lines)
+
+        self.win_changed = False
 
 
     def _print_lines(self, lines):
