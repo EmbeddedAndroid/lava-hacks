@@ -309,15 +309,15 @@ class LavaRunJob(object):
         self.actions = list()
 
     def get_description(self):
-        self._get_details()
+        self._get_state()
         return self.details.get('description', '')
 
     def get_hostname(self):
-        self._get_details()
+        self._get_state()
         return self.details.get('hostname', '')
 
     def get_device_type_id(self):
-        self._get_details()
+        self._get_state()
         return self.details.get('device_type_id', '')
 
     def get_output(self):
@@ -348,9 +348,9 @@ class LavaRunJob(object):
 
     def _get_state(self):
         self.raw_details = self.connection.get_job_details(self.job_id)
+        self._parse_details()
 
-    def _get_details(self):
-        self._get_state()
+    def _parse_details(self):
 
         description = self.raw_details.get('description', None)
         if description:
