@@ -47,7 +47,7 @@ class FileOutputHandler(object):
 
             time.sleep(2)
 
-        print "Job has finished."
+        self.file_obj.write("Job has finished.")
 
 
     def _update_output(self):
