@@ -35,12 +35,13 @@ class FileOutputHandler(object):
         self.outputter = outputter
 
         self.full_output = ""
-        self.printed_output = self.full_output
+        self.printed_output = ""
 
 
     def run(self):
         while True:
             self._update_output()
+            self._print_output()
 
             if not self.outputter.is_running(): break
 
@@ -51,15 +52,15 @@ class FileOutputHandler(object):
 
     def _update_output(self):
         self.full_output = self.outputter.get_output()
-        if self.printed_output:
-            new_output = self.full_output[len(self.printed_output):]
-        else:
-            new_output = self.full_output
+
+    def _print_output(self):
         if not self.full_output:
             self.file_obj.write("No job output...\n")
-        else:
-            self.file_obj.write(new_output)
-            self.file_obj.flush()
+
+        new_output = self.full_output[len(self.printed_output):]
+
+        self.file_obj.write(new_output)
+        self.file_obj.flush()
         self.printed_output = self.full_output
 
 
