@@ -94,6 +94,8 @@ class CursesOutput(object):
             key = self.stdscr.getch()
             if key == ord('q'):
                 break
+            elif key == ord('c'):
+                self.outputter.cancel_job()
 
             self._update_win()
             self._poll_state()
@@ -334,6 +336,11 @@ class LavaConnection(object):
         return self.connection.scheduler.job_output(job_id)
 
 
+    @handle_connection
+    def cancel_job(self, job_id):
+        return self.connection.scheduler.cancel_job(job_id)
+
+
 class LavaRunJob(object):
     def __init__(self, connection, job_id, poll_interval):
         self.END_STATES = ['Complete', 'Incomplete', 'Canceled']
@@ -348,6 +355,10 @@ class LavaRunJob(object):
         self.last_poll_time = None
         self.next_poll_time = datetime.datetime.now()
         self._is_running = True
+
+
+    def cancel_job(self):
+        self.state = self.connection.cancel_job(self.job_id)
 
 
     def get_description(self):
