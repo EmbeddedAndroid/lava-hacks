@@ -88,8 +88,13 @@ class CursesOutput(object):
     def _run(self, stdscr):
         self.stdscr = stdscr
         self._setup_win()
+        self.stdscr.nodelay(1)
 
         while True:
+            key = self.stdscr.getch()
+            if key == ord('q'):
+                break
+
             self._update_win()
             self._poll_state()
 
