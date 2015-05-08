@@ -25,6 +25,7 @@ import xmlrpclib
 import ConfigParser
 import curses
 import re
+import keyring.core
 
 from text_output import TextBlock
 
@@ -465,6 +466,12 @@ def get_config(args):
     except IOError:
         pass
     config.add_config_override(ArgumentParser(args))
+    if not config.get_config_variable('token'):
+        server = config.get_config_variable('server')
+        username = config.get_config_variable('username')
+        if server and username:
+            token = keyring.core.get_password("lava-tool-%s" % server, username)
+            config.add_config_override(ArgumentParser({'token': token}))
     return config
 
 def main(args):
