@@ -223,8 +223,7 @@ class FileConfigParser(object):
 
         self.config_parser = ConfigParser.ConfigParser()
 
-        if os.path.isfile(self.filename):
-            self.config_parser.readfp(open(self.filename))
+        self.config_parser.readfp(open(self.filename))
 
         self.username = None
         self.token = None
@@ -461,7 +460,10 @@ class LavaRunJob(object):
 
 def get_config(args):
     config = Config()
-    config.add_config_override(FileConfigParser(filename=args.get('config', None), section=args.get('section', None)))
+    try:
+        config.add_config_override(FileConfigParser(filename=args.get('config', None), section=args.get('section', None)))
+    except IOError:
+        pass
     config.add_config_override(ArgumentParser(args))
     return config
 
