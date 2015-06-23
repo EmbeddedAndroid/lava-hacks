@@ -62,6 +62,7 @@ class FileOutputHandler(object):
         new_output = self.full_output[len(self.printed_output):]
 
         self.file_obj.write(new_output)
+        self.file_obj.write(' \b') #HACK: force detection of broken pipe
         self.file_obj.flush()
         self.printed_output = self.full_output
 
