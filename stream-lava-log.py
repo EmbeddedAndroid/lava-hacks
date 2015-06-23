@@ -31,9 +31,10 @@ from text_output import TextBlock
 
 
 class FileOutputHandler(object):
-    def __init__(self, file_obj, outputter):
+    def __init__(self, file_obj, outputter, interval):
         self.file_obj = file_obj
         self.outputter = outputter
+        self.interval = interval
 
         self.full_output = ""
         self.printed_output = ""
@@ -46,7 +47,7 @@ class FileOutputHandler(object):
 
             if not self.outputter.is_running(): break
 
-            time.sleep(2)
+            time.sleep(self.interval)
 
         self.file_obj.write("Job has finished.")
 
@@ -68,9 +69,10 @@ class FileOutputHandler(object):
 
 
 class CursesOutput(object):
-    def __init__(self, outputter, follow=True):
+    def __init__(self, outputter, interval, follow=True):
         self.outputter = outputter
         self.textblock = TextBlock()
+        self.interval = interval
         self.follow = follow
 
         self.win_height = 0
@@ -106,7 +108,7 @@ class CursesOutput(object):
             self._redraw_status()
 
             self._refresh()
-            time.sleep(0.1)
+            time.sleep(self.interval)
 
 
     def _setup_win(self):
@@ -485,9 +487,9 @@ def main(args):
     lava_job.connect()
 
     if args["curses"]:
-        output_handler = CursesOutput(lava_job)
+        output_handler = CursesOutput(lava_job, args.get('interval'))
     else:
-        output_handler = FileOutputHandler(sys.stdout, lava_job)
+        output_handler = FileOutputHandler(sys.stdout, lava_job, args.get('interval'))
 
     output_handler.run()
 
@@ -503,6 +505,7 @@ if __name__ == '__main__':
     parser.add_argument("--server", default=os.environ['LAVA_SERVER'], help="server url for LAVA server")
     parser.add_argument("--job", help="job to fetch console log from")
     parser.add_argument("--curses", help="use curses for output", action="store_true")
+    parser.add_argument("--interval", default=2, help="log polling interval")
     args = vars(parser.parse_args())
     main(args)
 
