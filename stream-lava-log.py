@@ -469,6 +469,10 @@ def get_config(args):
     except IOError:
         pass
     config.add_config_override(ArgumentParser(args))
+    if not config.get_config_variable('username'):
+      exit("Must set a user name in environment (LAVA_USER), config file or CLI (--username)")
+    if not config.get_config_variable('server'):
+      exit("Must set a server in environment (LAVA_SERVER), config file or CLI (--username)")
     if not config.get_config_variable('token'):
         server = config.get_config_variable('server')
         username = config.get_config_variable('username')
@@ -500,9 +504,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", help="configuration for the LAVA server")
     parser.add_argument("--section", help="section in the LAVA config file")
-    parser.add_argument("--username", default=os.environ['LAVA_USER'], help="username for the LAVA server")
-    parser.add_argument("--token", default=os.environ['LAVA_TOKEN'], help="token for LAVA server api")
-    parser.add_argument("--server", default=os.environ['LAVA_SERVER'], help="server url for LAVA server")
+    parser.add_argument("--username", default=os.environ.get('LAVA_USER'), help="username for the LAVA server")
+    parser.add_argument("--token", default=os.environ.get('LAVA_TOKEN'), help="token for LAVA server api")
+    parser.add_argument("--server", default=os.environ.get('LAVA_SERVER'), help="server url for LAVA server")
     parser.add_argument("--job", help="job to fetch console log from")
     parser.add_argument("--curses", help="use curses for output", action="store_true")
     parser.add_argument("--interval", default=2, help="log polling interval")
