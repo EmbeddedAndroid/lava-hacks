@@ -473,6 +473,13 @@ def get_config(args):
       exit("Must set a user name in environment (LAVA_USER), config file or CLI (--username)")
     if not config.get_config_variable('server'):
       exit("Must set a server in environment (LAVA_SERVER), config file or CLI (--username)")
+
+    scheme = urlparse.urlparse(config.get_config_variable('server')).scheme
+    if not scheme == 'https':
+      result = raw_input('Non-secure protocol %s, proceed? (y/N) ' % (scheme))
+      if result != 'y' and result != 'Y':
+        exit("Chose not to proceed with non-secure protocol")
+
     if not config.get_config_variable('token'):
         server = config.get_config_variable('server')
         username = config.get_config_variable('username')
