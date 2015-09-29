@@ -509,7 +509,7 @@ if __name__ == '__main__':
     parser.add_argument("--server", default=os.environ.get('LAVA_SERVER'), help="server url for LAVA server")
     parser.add_argument("--job", help="job to fetch console log from")
     parser.add_argument("--curses", help="use curses for output", action="store_true")
-    parser.add_argument("--interval", default=2, help="log polling interval")
+    parser.add_argument("--interval", default=2, type=float, help="log polling interval")
     args = vars(parser.parse_args())
     main(args)
 
